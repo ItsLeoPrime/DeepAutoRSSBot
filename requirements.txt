@@ -1,0 +1,6 @@
+flask==3.0.0  
+python-telegram-bot==20.3  
+newspaper3k==0.2.8  
+feedparser==6.0.10  
+requests==2.31.0  
+redis==4.5.5  
