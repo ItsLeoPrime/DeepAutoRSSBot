@@ -13,8 +13,17 @@ from telegram.constants import ParseMode
 
 # Initialize services  
 app = Flask(__name__)  
-r = redis.from_url(os.getenv("REDIS_URL"))  
+# r = redis.from_url(os.getenv("REDIS_URL"))  
 bot = Bot(token=os.getenv("BOT_TOKEN"))  
+
+r = redis.Redis(
+    host=os.getenv("REDIS_HOST"),
+    port=os.getenv("REDIS_PORT"),
+    password=os.getenv("REDIS_PASSWORD"),
+    ssl=True,
+    ssl_cert_reqs=None,  # Disable certificate validation
+    decode_responses=True
+)
 
 # Self-pinging to keep Render alive  
 def start_pinger():  
