@@ -1,8 +1,7 @@
-newspaper3k==0.2.8
-lxml==4.9.3  # Pinned to last version with built-in html.clean
-python-telegram-bot==20.3
 flask==3.0.0
+python-telegram-bot==20.3
+newspaper3k==0.2.8
+lxml==4.9.3
 feedparser==6.0.10
 requests==2.31.0
 redis==4.5.5
-gunicorn==21.2.0  # ← Add this line  
