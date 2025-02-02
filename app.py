@@ -24,7 +24,7 @@ def start_pinger():
                 requests.get(f"https://{os.getenv('RENDER_SERVICE_NAME')}.onrender.com/keepalive")  
             except:  
                 pass  
-            time.sleep(840)  # 14 minutes  
+            time.sleep(60)  # 14 minutes  
     threading.Thread(target=ping, daemon=True).start()  
 
 start_pinger()  # Start background thread  
@@ -96,7 +96,10 @@ def escape_markdown(text):
 def process_feeds():  
     while True:  
         for feed_url in RSS_FEEDS:  
+            print(f"Fetching feed: {feed_url}")  # Add this
             feed = feedparser.parse(feed_url)  
+            if not feed.entries:
+                print(f"❗ No entries in feed: {feed_url}")  # Add this
             for entry in feed.entries[:5]:  # Latest 5  
                 content, image = fetch_article(entry.link)  
                 if content and is_unique(content):  
@@ -108,3 +111,28 @@ def process_feeds():
 if __name__ == "__main__":  
     threading.Thread(target=process_feeds, daemon=True).start()  
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))  
+
+
+
+
+
+
+
+@app.route("/testpost")
+def test_post():
+    try:
+        bot.send_message(chat_id=os.getenv("CHAT_ID"), text="🚀 Test message from bot!")
+        return "Test post succeeded", 200
+    except Exception as e:
+        return f"Test post failed: {str(e)}", 500
+
+
+@app.route("/testredis")
+def test_redis():
+    try:
+        r.ping()
+        return "Redis connected", 200
+    except Exception as e:
+        return f"Redis connection failed: {str(e)}", 500
+
+
