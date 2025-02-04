@@ -13,9 +13,10 @@ from telegram.constants import ParseMode
 
 # Initialize services  
 app = Flask(__name__)  
-# r = redis.from_url(os.getenv("REDIS_URL"))  
+
 bot = Bot(token=os.getenv("BOT_TOKEN"))  
 
+# Configure Redis connection
 r = redis.Redis(
     host=os.getenv("REDIS_HOST"),
     port=os.getenv("REDIS_PORT"),
@@ -31,9 +32,9 @@ def start_pinger():
         while True:  
             try:  
                 requests.get(f"https://{os.getenv('RENDER_SERVICE_NAME')}.onrender.com/keepalive")
-                print("Successfully pinged keepalive endpoint")  
+                print("✅ Successfully pinged keepalive endpoint")  
             except Exception as e:
-                print(f"Ping error: {str(e)}")  
+                print(f"❌ Ping error: {str(e)}")  
             time.sleep(840)  # 14 minutes (prevents Render sleep)
     threading.Thread(target=ping, daemon=True).start()  
 
@@ -41,9 +42,9 @@ start_pinger()  # Start background thread
 
 # Verified working RSS feeds
 RSS_FEEDS = [  
-    "https://www.coindesk.com/arc/outboundfeeds/rss/",  # Fixed with www
+    "https://www.coindesk.com/arc/outboundfeeds/rss/",
     "https://cointelegraph.com/rss",
-    "https://decrypt.co/feed",  # Direct Decrypt feed
+    "https://decrypt.co/feed",
     "https://cryptopanic.com/news/rss/",
 ]
 
@@ -61,7 +62,7 @@ def get_crypto_prices():
             f"ETH: ${data['ethereum']['usd']} ({data['ethereum']['usd_24h_change']:.1f}%)"  
         )  
     except Exception as e:
-        print(f"Price fetch error: {str(e)}")  
+        print(f"❌ Price fetch error: {str(e)}")  
         return "BTC/ETH: Price data unavailable"  
 
 def fetch_article(url):  
@@ -69,10 +70,10 @@ def fetch_article(url):
         article = Article(url, headers=headers, request_timeout=10)
         article.download()
         article.parse()
-        print(f"Fetched article from {url}")
+        print(f"✅ Fetched article from {url}")
         return article.text, article.top_image  
     except Exception as e:
-        print(f"Article fetch failed: {str(e)}")  
+        print(f"❌ Article fetch failed: {str(e)}")  
         return "", ""  
 
 def is_unique(content):  
@@ -88,9 +89,14 @@ def summarize(text):
         )  
         return response.json()[0]['summary_text']  
     except Exception as e:
-        print(f"Summarization failed: {str(e)}")  
+        print(f"❌ Summarization failed: {str(e)}")  
         sentences = re.split(r'(?<=[.!?]) +', text)  
         return ' '.join(sentences[:3]) if len(sentences) > 3 else text  
+
+# New root route to fix 404 error
+@app.route("/")  
+def home():  
+    return "🚀 Crypto News Bot is Running!", 200  
 
 @app.route("/keepalive")  
 def keepalive():  
@@ -100,17 +106,17 @@ def keepalive():
 def test_post():
     try:
         bot.send_message(chat_id=os.getenv("CHAT_ID"), text="🚀 Test message from bot!")
-        return "Test post succeeded", 200
+        return "✅ Test post succeeded", 200
     except Exception as e:
-        return f"Test post failed: {str(e)}", 500
+        return f"❌ Test post failed: {str(e)}", 500
 
 @app.route("/testredis")
 def test_redis():
     try:
         r.ping()
-        return "Redis connected", 200
+        return "✅ Redis connected", 200
     except Exception as e:
-        return f"Redis connection failed: {str(e)}", 500
+        return f"❌ Redis connection failed: {str(e)}", 500
 
 def post_to_telegram(title, url, summary, image):  
     try:
@@ -134,9 +140,9 @@ def post_to_telegram(title, url, summary, image):
                 text=message, 
                 parse_mode=ParseMode.MARKDOWN_V2
             )  
-        print(f"Posted: {title}")
+        print(f"✅ Posted: {title}")
     except Exception as e:
-        print(f"Posting failed: {str(e)}")
+        print(f"❌ Posting failed: {str(e)}")
 
 def escape_markdown(text):  
     return re.sub(r'([_*\[\]()~`>#+\-=|{}.!])', r'\\\1', text)  
@@ -144,28 +150,27 @@ def escape_markdown(text):
 def process_feeds():  
     while True:  
         print("\n" + "="*40)
-        print("Starting new feed check cycle")
+        print("🔄 Starting new feed check cycle")
         for feed_url in RSS_FEEDS:  
             try:
-                print(f"\n🔍 Fetching feed: {feed_url}")  
+                print(f"🔍 Fetching feed: {feed_url}")  
                 feed = feedparser.parse(feed_url)  
                 
                 if not feed.entries:
                     print(f"❗ No entries in feed: {feed_url}")
                     continue
-                    
-                print(f"Found {len(feed.entries)} entries")
+                print(f"✅ Found {len(feed.entries)} entries")
                 
-                for entry in feed.entries[:5]:  # Latest 5  
-                    print(f"\nProcessing: {entry.title}")
+                for entry in feed.entries[:5]:  
+                    print(f"📌 Processing: {entry.title}")
                     content, image = fetch_article(entry.link)  
                     
                     if not content:
-                        print("Skipping - no content")
+                        print("⚠️ Skipping - no content")
                         continue
                         
                     if is_unique(content):
-                        print("New unique article found")
+                        print("✅ New unique article found")
                         summary = summarize(content)  
                         post_to_telegram(entry.title, entry.link, summary, image)  
                         r.set(
@@ -174,16 +179,16 @@ def process_feeds():
                             ex=604800  # 7 days
                         )
                     else:
-                        print("Duplicate article - skipping")
+                        print("⏩ Duplicate article - skipping")
                         
             except Exception as e:
-                print(f"Feed processing error: {str(e)}")
+                print(f"❌ Feed processing error: {str(e)}")
                 
-        print("\nCompleted feed cycle. Sleeping...")        
-        time.sleep(900)  # 15 minutes between checks  
+        print("⏳ Completed feed cycle. Sleeping...")        
+        time.sleep(900)  # 15 minutes  
 
 if __name__ == "__main__":  
     print("🚀 Starting Crypto News Bot")
-    print(f"Using Redis: {os.getenv('REDIS_URL', 'Not configured!')}")
+    print(f"Using Redis: {os.getenv('REDIS_HOST', 'Not configured!')}")
     threading.Thread(target=process_feeds, daemon=True).start()  
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(host='0.0.0.0', port=int(os.getenv("PORT", "10000")))
